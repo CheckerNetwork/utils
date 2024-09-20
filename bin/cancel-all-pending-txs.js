@@ -197,6 +197,7 @@ async function cancelTransaction (recentSendMessage, tx) {
   const gasFeeCap = Number(recentSendMessage.gasFeeCap)
   const oldGasPremium = tx.gasPremium
   const nonce = tx.nonce
+  const maxPriorityFeePerGas = Math.ceil(oldGasPremium * 1.252)
 
   console.log(' - SENDING THE REPLACEMENT TRANSACTION')
   try {
@@ -205,8 +206,9 @@ async function cancelTransaction (recentSendMessage, tx) {
       value: 0,
       nonce,
       gasLimit: Math.ceil(gasUsed * 1.1),
-      maxFeePerGas: gasFeeCap,
-      maxPriorityFeePerGas: Math.ceil(oldGasPremium * 1.252)
+      // priorityFee cannot be more than maxFee
+      maxFeePerGas: Math.max(gasFeeCap, maxPriorityFeePerGas),
+      maxPriorityFeePerGas
     })
     console.log('nonce=%s REPLACED TX %s -> %s', tx.nonce, tx.cid, replacementTx.hash)
 
