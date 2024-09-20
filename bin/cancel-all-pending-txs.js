@@ -3,7 +3,7 @@
  *   echo 'WALLET_SEED="word1 word2..."' >> .env
  *   node bin/cancel-all-pending-txs.js [concurrency]
  *
- * Concurrency 50 works well.
+ * Recommended concurrency setting: 10
  *
  * You can find the f0 address e.g. at https://filfox.info/en/address/{f4address}
  *
