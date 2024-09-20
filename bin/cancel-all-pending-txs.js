@@ -1,7 +1,7 @@
 /**
  * Usage
  *   echo 'WALLET_SEED="word1 word2..."' >> .env
- *   node bin/cancel-all-pending-txs.js [max-tx-count]
+ *   node bin/cancel-all-pending-txs.js [concurrency]
  *
  * You can find the f0 address e.g. at https://filfox.info/en/address/{f4address}
  *
@@ -25,7 +25,8 @@ const {
 assert(GLIF_TOKEN, 'GLIF_TOKEN required')
 assert(WALLET_SEED, 'WALLET_SEED required')
 
-const [, , maxCount = 10] = process.argv
+const [, , concurrency = 1] = process.argv
+assert(concurrency > 0, 'concurrency must be at least 1')
 
 const { signer } = createSigner()
 
@@ -37,16 +38,16 @@ pendingTxs.sort((a, b) => a.nonce - b.nonce)
 //   console.log('%s %s %s', tx.nonce, tx.createdAt, tx.cid)
 // }
 
-pendingTxs.splice(maxCount)
-console.log('Cancelling %s oldest transactions from %s (%s)', pendingTxs.length, signer.address, f0address)
+console.log(
+  'Cancelling %s oldest transactions from %s (%s) with concurrency %s',
+  pendingTxs.length,
+  signer.address,
+  f0address,
+  concurrency
+)
 
-for (const tx of pendingTxs) {
-  if (tx.createdAt.getTime() > Date.now() - 30 * 60_000) {
-    console.log('TX %s (%s) was created less than 30 minutes ago, will not cancel it')
-    continue
-  }
-
-  console.log('REPLACING %s (nonce %s, created at %s)', tx.cid, tx.nonce, tx.createdAt)
+while (pendingTxs.length > 0) {
+  const chunk = pendingTxs.slice(0, concurrency)
 
   const recentSendMessage = await getRecentSendMessage()
   console.log(' - Calculating gas fees from the recent Send message %s (created at %s)',
@@ -54,27 +55,20 @@ for (const tx of pendingTxs) {
     new Date(recentSendMessage.timestamp * 1000).toISOString()
   )
 
-  const gasUsed = recentSendMessage.receipt.gasUsed
-  const gasFeeCap = Number(recentSendMessage.gasFeeCap)
-  const oldGasPremium = tx.gasPremium
-  const nonce = tx.nonce
+  await Promise.all(chunk.map(async (tx) => {
+    if (tx.createdAt.getTime() > Date.now() - 30 * 60_000) {
+      console.log('TX %s (nonce %s) was created at %s (less than 30 minutes ago), will not cancel it', tx.cid, tx.nonce, tx.createdAt)
+      return
+    }
 
-  console.log(' - SENDING THE REPLACEMENT TRANSACTION')
-  const replacementTx = await signer.sendTransaction({
-    to: signer.address,
-    value: 0,
-    nonce,
-    gasLimit: Math.ceil(gasUsed * 1.1),
-    maxFeePerGas: gasFeeCap,
-    maxPriorityFeePerGas: Math.ceil(oldGasPremium * 1.252)
-  })
-  console.log(' - Waiting for the transaction receipt:', replacementTx.hash)
-  try {
-    const receipt = await replacementTx.wait()
-    console.log(' - TX status:', receipt?.status)
-  } catch (err) {
-    console.log(' - TX was rejected with code %s (%s)', err.code, err.shortMessage)
-  }
+    const replacementTx = await cancelTransaction(recentSendMessage, tx)
+    try {
+      const receipt = await replacementTx.wait()
+      console.log(' - TX %s status:', replacementTx.hash, receipt?.status)
+    } catch (err) {
+      console.log(' - TX %s was rejected with code %s (%s)', replacementTx.hash, err.code, err.shortMessage)
+    }
+  }))
 }
 
 async function getWalletId (f4address) {
@@ -92,7 +86,7 @@ async function listPendingTransactions (f0address) {
   while (true) {
     console.log('Fetching pending transactions %s-%s', offset + 1, offset + 50)
     const res = await fetch(`https://filfox.info/api/v1/address/${f0address}/pending-messages?limit=50&offset=${offset}`)
-    assertOkResponse(res)
+    await assertOkResponse(res)
     /**
    * @type {{
    *   totalCount: number;
@@ -146,6 +140,7 @@ function createSigner () {
 /**
  * @returns {Promise<{
    "cid": string;
+   "nonce": number;
    "height": number;
    "timestamp": number;
    "gasLimit": number;
@@ -187,4 +182,34 @@ async function getRecentSendMessage () {
   }
 
   return /** @type {any} */(await res.json())
+}
+
+/**
+ * @param {ReturnType<getRecentSendMessage>} recentSendMessage
+ * @param {{
+ *  cid: string;
+ *  gasPremium: string;
+ *  nonce: number;
+ *  createdAt: Date;
+ * }} tx
+ */
+async function cancelTransaction (recentSendMessage, tx) {
+  console.log('REPLACING %s (nonce %s, created at %s)', tx.cid, tx.nonce, tx.createdAt)
+
+  const gasUsed = recentSendMessage.receipt.gasUsed
+  const gasFeeCap = Number(recentSendMessage.gasFeeCap)
+  const oldGasPremium = tx.gasPremium
+  const nonce = tx.nonce
+
+  console.log(' - SENDING THE REPLACEMENT TRANSACTION')
+  const replacementTx = await signer.sendTransaction({
+    to: signer.address,
+    value: 0,
+    nonce,
+    gasLimit: Math.ceil(gasUsed * 1.1),
+    maxFeePerGas: gasFeeCap,
+    maxPriorityFeePerGas: Math.ceil(oldGasPremium * 1.252)
+  })
+  console.log(' - REPLACED %s -> %s', tx.cid, replacementTx.hash)
+  return replacementTx
 }
