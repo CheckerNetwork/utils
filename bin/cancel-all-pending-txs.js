@@ -68,7 +68,7 @@ for (const tx of pendingTxs) {
     const receipt = await replacementTx.wait()
     console.log(' - TX status:', receipt?.status)
   } catch (err) {
-    console.log(' - TX rejected with code %s (%s)', err.code, err.shortReason)
+    console.log(' - TX was rejected with code %s (%s)', err.code, err.shortReason)
   }
 }
 
