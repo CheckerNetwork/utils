@@ -41,6 +41,11 @@ pendingTxs.splice(maxCount)
 console.log('Cancelling %s oldest transactions from %s (%s)', pendingTxs.length, signer.address, f0address)
 
 for (const tx of pendingTxs) {
+  if (tx.createdAt.getTime() > Date.now() - 30 * 60_000) {
+    console.log('TX %s (%s) was created less than 30 minutes ago, will not cancel it')
+    continue
+  }
+
   console.log('REPLACING %s (nonce %s, created at %s)', tx.cid, tx.nonce, tx.createdAt)
 
   const recentSendMessage = await getRecentSendMessage()
@@ -68,7 +73,7 @@ for (const tx of pendingTxs) {
     const receipt = await replacementTx.wait()
     console.log(' - TX status:', receipt?.status)
   } catch (err) {
-    console.log(' - TX was rejected with code %s (%s)', err.code, err.shortReason)
+    console.log(' - TX was rejected with code %s (%s)', err.code, err.shortMessage)
   }
 }
 
