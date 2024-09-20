@@ -183,10 +183,11 @@ async function getRecentSendMessage () {
  * }} tx
  */
 async function cancelTransaction (recentSendMessage, tx) {
-  if (tx.createdAt.getTime() > Date.now() - 30 * 60_000) {
-    console.log('TX %s (nonce %s) was created at %s (less than 30 minutes ago), will not cancel it', tx.cid, tx.nonce, tx.createdAt)
-    return
-  }
+  // This would skip replacement TXs we created by this script. That's not what we want.
+  // if (tx.createdAt.getTime() > Date.now() - 30 * 60_000) {
+  //   console.log('TX %s (nonce %s) was created at %s (less than 30 minutes ago), will not cancel it', tx.cid, tx.nonce, tx.createdAt)
+  //   return
+  // }
 
   console.log('REPLACING %s (nonce %s, created at %s)', tx.cid, tx.nonce, tx.createdAt)
 
