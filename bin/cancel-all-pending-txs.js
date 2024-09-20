@@ -64,11 +64,11 @@ for (const tx of pendingTxs) {
     maxPriorityFeePerGas: Math.ceil(oldGasPremium * 1.252)
   })
   console.log(' - Waiting for the transaction receipt:', replacementTx.hash)
-  const receipt = await replacementTx.wait()
-  console.log(' - TX status:', receipt?.status)
-  if (receipt?.status !== 1) {
-    console.error('Replacement TX was rejected. Receipt: %o', receipt)
-    process.exit(3)
+  try {
+    const receipt = await replacementTx.wait()
+    console.log(' - TX status:', receipt?.status)
+  } catch (err) {
+    console.log(' - TX rejected with code %s (%s)', err.code, err.shortReason)
   }
 }
 
