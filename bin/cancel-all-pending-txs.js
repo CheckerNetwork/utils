@@ -55,20 +55,7 @@ while (pendingTxs.length > 0) {
     new Date(recentSendMessage.timestamp * 1000).toISOString()
   )
 
-  await Promise.all(chunk.map(async (tx) => {
-    if (tx.createdAt.getTime() > Date.now() - 30 * 60_000) {
-      console.log('TX %s (nonce %s) was created at %s (less than 30 minutes ago), will not cancel it', tx.cid, tx.nonce, tx.createdAt)
-      return
-    }
-
-    const replacementTx = await cancelTransaction(recentSendMessage, tx)
-    try {
-      const receipt = await replacementTx.wait()
-      console.log(' - TX %s status:', replacementTx.hash, receipt?.status)
-    } catch (err) {
-      console.log(' - TX %s was rejected with code %s (%s)', replacementTx.hash, err.code, err.shortMessage)
-    }
-  }))
+  await Promise.all(chunk.map(async (tx) => cancelTransaction(recentSendMessage, tx)))
 }
 
 async function getWalletId (f4address) {
@@ -194,6 +181,11 @@ async function getRecentSendMessage () {
  * }} tx
  */
 async function cancelTransaction (recentSendMessage, tx) {
+  if (tx.createdAt.getTime() > Date.now() - 30 * 60_000) {
+    console.log('TX %s (nonce %s) was created at %s (less than 30 minutes ago), will not cancel it', tx.cid, tx.nonce, tx.createdAt)
+    return
+  }
+
   console.log('REPLACING %s (nonce %s, created at %s)', tx.cid, tx.nonce, tx.createdAt)
 
   const gasUsed = recentSendMessage.receipt.gasUsed
@@ -202,14 +194,26 @@ async function cancelTransaction (recentSendMessage, tx) {
   const nonce = tx.nonce
 
   console.log(' - SENDING THE REPLACEMENT TRANSACTION')
-  const replacementTx = await signer.sendTransaction({
-    to: signer.address,
-    value: 0,
-    nonce,
-    gasLimit: Math.ceil(gasUsed * 1.1),
-    maxFeePerGas: gasFeeCap,
-    maxPriorityFeePerGas: Math.ceil(oldGasPremium * 1.252)
-  })
-  console.log(' - REPLACED %s -> %s', tx.cid, replacementTx.hash)
-  return replacementTx
+  try {
+    const replacementTx = await signer.sendTransaction({
+      to: signer.address,
+      value: 0,
+      nonce,
+      gasLimit: Math.ceil(gasUsed * 1.1),
+      maxFeePerGas: gasFeeCap,
+      maxPriorityFeePerGas: Math.ceil(oldGasPremium * 1.252)
+    })
+    console.log(' - REPLACED %s -> %s', tx.cid, replacementTx.hash)
+
+    try {
+      const receipt = await replacementTx.wait()
+      console.log(' - TX %s status:', replacementTx.hash, receipt?.status)
+    } catch (err) {
+      console.log(' - TX %s was rejected with code %s (%s)', replacementTx.hash, err.code, err.shortMessage)
+    }
+  } catch (err) {
+    if (err.code === 'NONCE_EXPIRED') {
+      console.log('  - TX %s was already committed', tx.cid)
+    }
+  }
 }
