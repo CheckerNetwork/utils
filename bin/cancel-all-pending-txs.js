@@ -66,6 +66,10 @@ for (const tx of pendingTxs) {
   console.log(' - Waiting for the transaction receipt:', replacementTx.hash)
   const receipt = await replacementTx.wait()
   console.log(' - TX status:', receipt?.status)
+  if (receipt?.status !== 1) {
+    console.error('Replacement TX was rejected. Receipt: %o', receipt)
+    process.exit(3)
+  }
 }
 
 async function getWalletId (f4address) {
