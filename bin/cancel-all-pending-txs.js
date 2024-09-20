@@ -58,6 +58,8 @@ while (pendingTxs.length > 0) {
   )
 
   await Promise.all(chunk.map(async (tx) => cancelTransaction(recentSendMessage, tx)))
+
+  console.log('== %s pending transactions remaining ==', pendingTxs.length)
 }
 
 async function getWalletId (f4address) {
