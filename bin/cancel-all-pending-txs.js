@@ -49,7 +49,7 @@ console.log(
 )
 
 while (pendingTxs.length > 0) {
-  const chunk = pendingTxs.slice(0, concurrency)
+  const chunk = pendingTxs.splice(0, concurrency)
 
   const recentSendMessage = await getRecentSendMessage()
   console.log(' - Calculating gas fees from the recent Send message %s (created at %s)',
