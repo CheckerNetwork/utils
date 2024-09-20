@@ -217,6 +217,8 @@ async function cancelTransaction (recentSendMessage, tx) {
   } catch (err) {
     if (err.code === 'NONCE_EXPIRED') {
       console.log('  - TX %s was already committed', tx.cid)
+    } else {
+      throw err
     }
   }
 }
