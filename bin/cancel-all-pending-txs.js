@@ -206,17 +206,17 @@ async function cancelTransaction (recentSendMessage, tx) {
       maxFeePerGas: gasFeeCap,
       maxPriorityFeePerGas: Math.ceil(oldGasPremium * 1.252)
     })
-    console.log(' - REPLACED %s -> %s', tx.cid, replacementTx.hash)
+    console.log('nonce=%s REPLACED TX %s -> %s', tx.nonce, tx.cid, replacementTx.hash)
 
     try {
       const receipt = await replacementTx.wait()
-      console.log(' - TX %s status:', replacementTx.hash, receipt?.status)
+      console.log('nonce=%s TX %s status:', tx.nonce, replacementTx.hash, receipt?.status)
     } catch (err) {
-      console.log(' - TX %s was rejected with code %s (%s)', replacementTx.hash, err.code, err.shortMessage)
+      console.log('nonce=%s TX %s was rejected with code %s (%s)', tx.nonce, replacementTx.hash, err.code, err.shortMessage)
     }
   } catch (err) {
     if (err.code === 'NONCE_EXPIRED') {
-      console.log('  - TX %s was already committed', tx.cid)
+      console.log('nonce=%s TX %s was already committed', tx.nonce, tx.cid)
     } else {
       throw err
     }
