@@ -16,5 +16,14 @@
   "bugs": {
     "url": "https://github.com/filecoin-station/utils/issues"
   },
-  "homepage": "https://github.com/filecoin-station/utils#readme"
+  "homepage": "https://github.com/filecoin-station/utils#readme",
+  "dependencies": {
+    "@glif/filecoin-address": "^3.0.12",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.13.2",
+    "p-retry": "^6.2.0"
+  },
+  "devDependencies": {
+    "standard": "^17.1.2"
+  }
 }
