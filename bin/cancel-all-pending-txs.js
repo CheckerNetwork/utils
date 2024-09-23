@@ -64,7 +64,7 @@ while (pendingTxs.length > 0) {
 
 async function getWalletId (f4address) {
   const res = await fetch(`https://filfox.info/api/v1/address/${f4address}`)
-  assertOkResponse(res)
+  await assertOkResponse(res)
   const { id } = await res.json()
   assert.match(id, /^f0/)
   return id
