@@ -112,10 +112,7 @@ async function listPendingTransactions (f0address) {
 function createSigner () {
   const fetchRequest = new ethers.FetchRequest('https://api.node.glif.io/rpc/v1')
   fetchRequest.setHeader('Authorization', `Bearer ${GLIF_TOKEN}`)
-  const provider = new ethers.JsonRpcProvider(fetchRequest, null, {
-    polling: true,
-    batchMaxCount: 10
-  })
+  const provider = new ethers.JsonRpcProvider(fetchRequest)
 
   const signer = ethers.Wallet.fromPhrase(WALLET_SEED, provider)
   const walletDelegatedAddress = newDelegatedEthAddress(/** @type {any} */(signer.address), CoinType.MAIN).toString()
