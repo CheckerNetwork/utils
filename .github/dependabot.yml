@@ -12,3 +12,14 @@ updates:
     reviewers:
       - "bajtos"
       - "juliangruber"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "09:00"
+      timezone: "Europe/Berlin"
+    commit-message:
+      prefix: "ci"
+    reviewers:
+      - "bajtos"
+      - "juliangruber"
